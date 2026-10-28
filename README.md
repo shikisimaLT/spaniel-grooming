@@ -9,6 +9,9 @@ npm install
 npm run dev
 ```
 
+## Database
+Skema ada di `supabase/migrations/` (tabel, RLS, fungsi; tanpa data). Untuk project Supabase baru, jalankan berurutan lewat `supabase db push` atau SQL Editor. Satu-satunya baris data adalah konfigurasi `fuel_rate` (tarif bensin per trip). User pertama yang dibuat otomatis menjadi owner.
+
 ## Alamat
 - `/` — landing page publik (tanpa login). Harga & area dibaca lewat fungsi database `landing_data()`; nomor WhatsApp di `src/app/page.tsx`.
 - `/back-office` — panel admin (login di `/back-office/login`).
