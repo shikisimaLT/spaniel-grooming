@@ -1,16 +1,20 @@
 import { requireRole } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Msg, PageHead } from "@/components/ui";
-import { currentMonth, monthRange, pct, rp } from "@/lib/format";
+import { PeriodPicker } from "@/components/period-picker";
+import { pct, readPeriod, rp } from "@/lib/format";
 import { groomerSummary } from "@/lib/summary";
 import { addBodMember, saveBodPct, toggleBodMember } from "./actions";
 
 export default async function BodPage({
   searchParams,
-}: { searchParams: Promise<{ m?: string; error?: string; ok?: string }> }) {
+}: { searchParams: Promise<{ mode?: string; date?: string; from?: string; to?: string; error?: string; ok?: string }> }) {
   await requireRole("owner");
-  const { m = currentMonth(), error, ok } = await searchParams;
-  const { from, to } = monthRange(m);
+  const sp = await searchParams;
+  const period = readPeriod(sp);
+  const { from, to } = period;
+  const back = new URLSearchParams({ mode: period.mode, date: period.date, ...(sp.from ? { from: sp.from } : {}), ...(sp.to ? { to: sp.to } : {}) }).toString();
+
   const supabase = await createClient();
   const [rows, s, mem, exp, gr] = await Promise.all([
     groomerSummary(supabase, from, to),
@@ -32,22 +36,20 @@ export default async function BodPage({
   });
   const bodTotal = calc.reduce((a, r) => a + r.bod, 0);
   const ownerTotal = calc.reduce((a, r) => a + r.owner, 0);
+  const perMember = bodTotal / Math.max(1, activeMembers.length);
 
   return (
     <>
-      <PageHead eyebrow="Analisa" title="Bagi hasil BOD">
-        <form className="flex gap-2">
-          <input className="input" type="month" name="m" defaultValue={m} aria-label="Bulan" />
-          <button className="btn ghost">Tampilkan</button>
-        </form>
-      </PageHead>
-      <Msg error={error} ok={ok} />
+      <PageHead eyebrow="Analisa" title="Bagi hasil BOD" />
+      <Msg error={sp.error} ok={sp.ok} />
+      <PeriodPicker {...period} />
       <p className="mb-4 max-w-2xl text-muted">
-        Bersih per groomer = omzet − komisi − bonus − bensin − porsi expense operasional ({rp(share)} per groomer aktif).
+        Bersih per groomer = omzet − komisi − bonus − bensin − porsi expense periode ini ({rp(share)} per groomer aktif, total expense {rp(expense)}).
         Bagian BOD = bersih × persen groomer tersebut; sisanya milik owner.
       </p>
 
       <form action={saveBodPct}>
+        <input type="hidden" name="back" value={back} />
         <div className="scroll-x panel p-0">
           <table className="ledger">
             <thead><tr><th>Groomer</th><th className="r">Omzet</th><th className="r">Bersih (setelah expense)</th><th style={{ width: 110 }}>% BOD</th><th className="r">Bagian BOD</th><th className="r">Bagian Owner</th></tr></thead>
@@ -71,12 +73,13 @@ export default async function BodPage({
 
       <section className="panel mt-8">
         <h2>Anggota BOD</h2>
+        <p className="mt-1 text-sm text-muted">Bagian periode ini, dibagi rata ke anggota aktif.</p>
         <ul className="mt-3 divide-y divide-rule">
           {members.map((x) => (
             <li key={x.id} className="flex items-center justify-between py-2">
               <span className={x.active ? "" : "text-muted line-through"}>{x.name}</span>
               <span className="flex items-center gap-4">
-                {x.active && <b className="figure">{rp(bodTotal / Math.max(1, activeMembers.length))}</b>}
+                {x.active && <b className="figure text-lg">{rp(perMember)}</b>}
                 <form action={toggleBodMember}>
                   <input type="hidden" name="id" value={x.id} /><input type="hidden" name="active" value={String(x.active)} />
                   <button className="text-sm underline">{x.active ? "Nonaktifkan" : "Aktifkan"}</button>
@@ -87,10 +90,11 @@ export default async function BodPage({
           {members.length === 0 && <li className="py-2 text-muted">Belum ada anggota BOD.</li>}
         </ul>
         <form action={addBodMember} className="mt-3 flex gap-2">
+          <input type="hidden" name="back" value={back} />
           <input className="input max-w-xs" name="name" placeholder="Nama anggota" required />
           <button className="btn ghost">Tambah</button>
         </form>
-        <p className="mt-2 text-sm text-muted">Bagian BOD dibagi rata ke anggota aktif ({activeMembers.length} orang, {pct(activeMembers.length ? 1 / activeMembers.length : 0)} masing-masing).</p>
+        <p className="mt-2 text-sm text-muted">{activeMembers.length} anggota aktif, masing-masing {pct(activeMembers.length ? 1 / activeMembers.length : 0)} dari bagian BOD.</p>
       </section>
     </>
   );

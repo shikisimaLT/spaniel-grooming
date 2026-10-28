@@ -21,6 +21,26 @@ export const currentMonth = () => today().slice(0, 7);
 
 export type PeriodMode = "week" | "half" | "custom";
 
+export const PERIOD_MODES: { id: PeriodMode; label: string }[] = [
+  { id: "week", label: "Mingguan" },
+  { id: "half", label: "2 mingguan (1–15 / 16–akhir)" },
+  { id: "custom", label: "Per tanggal" },
+];
+
+export function addDays(isoDate: string, n: number) {
+  const d = new Date(isoDate + "T00:00:00");
+  d.setDate(d.getDate() + n);
+  return iso(d);
+}
+
+/** Read ?mode=&date=&from=&to= from a page's searchParams and resolve the date range. Default: current 1-15 / 16-end half. */
+export function readPeriod(sp: { mode?: string; date?: string; from?: string; to?: string }) {
+  const mode: PeriodMode = PERIOD_MODES.some((m) => m.id === sp.mode) ? (sp.mode as PeriodMode) : "half";
+  const date = sp.date || today();
+  const { from, to } = resolvePeriod(mode, date, sp.from, sp.to);
+  return { mode, date, from, to };
+}
+
 /** Resolve a salary period. week = Mon-Sun containing `date`; half = 1-15 or 16-end. */
 export function resolvePeriod(mode: PeriodMode, date: string, from?: string, to?: string) {
   const d = new Date(date + "T00:00:00");

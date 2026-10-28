@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { NavProgress } from "@/components/nav-progress";
 
 export const metadata: Metadata = {
   title: "Spaniel Grooming — Back office",
@@ -6,5 +7,10 @@ export const metadata: Metadata = {
 };
 
 export default function BackOfficeLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <NavProgress />
+      {children}
+    </>
+  );
 }
