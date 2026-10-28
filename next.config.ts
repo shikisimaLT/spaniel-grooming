@@ -1,9 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  // alamat lama sebelum panel dipindah ke /back-office
+  async redirects() {
+    return [
+      { source: "/login", destination: "/back-office/login", permanent: false },
+      { source: "/landing", destination: "/", permanent: false },
+    ];
+  },
   turbopack: {
     rules: {
       "*.css": {
